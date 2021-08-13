@@ -217,6 +217,13 @@ data timing;
 	followupR24mo = (date_t45-r24_date)/30.5;
 run; 
 
+data timing2; 
+	set timing; 
+	keep child_id r24_date date_t45 followupR24mo followupR24yr; 
+	run; 
+
+proc contents data = timing order=varnum; run; 
+
 proc means data = timing noprint;
 by child_id; 
 var followupR24yr followupR24mo; 
@@ -228,6 +235,7 @@ run;
 data avgFOLLOWUPperGIRL2; 
 	set avgFOLLOWUPperGIRL; 
 	rename _FREQ_=num_recalls; 
+	if _FREQ_ = 1 then recallcat = 1; else if _FREQ_ > 1 then recallcat = 0; 
 	run; 
 
 ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Aug08\timing_months.xlsx"
@@ -235,15 +243,20 @@ options(start_at="2,2" embedded_titles = 'on' sheet_interval='proc') ;
 
 Title 'Average'; 
 proc means data = timing n min mean max;
-var followupR24mo; 
+var followupR24mo followupR24yr; 
 run; 
 
 Title 'Average of averages'; 
 proc means data = avgFOLLOWUPperGIRL2 n min mean max; 
-var num_recalls avgFUmo minFUmo maxFUmo; 
+var num_recalls avgFUmo minFUmo maxFUmo avgFUyr minFUyr maxFUyr; 
+run; 
+
+Title 'Average of averages- by recalls'; 
+proc means data = avgFOLLOWUPperGIRL2 n min mean max; 
+class recallcat; 
+var num_recalls avgFUmo minFUmo maxFUmo avgFUyr minFUyr maxFUyr; 
 run; 
 ods excel close; 
-
 
 
 
@@ -314,10 +327,16 @@ data dietbdcomplete2;
 	set dietbdcomplete2; 
 		/* creating new variable for all sweetened dairy or dairy-sub drinks */ 
 	TotSwMilkAndSub = TotSwMilkSubG + TotSwMilkG + TotSwYogG; 
+
+	/* creating new variable for age at recalls */
+	age_R24 = (r24_date-date_birth)/365.25;  
 run; 
+
+proc contents data = dietbdcomplete2 order=varnum; run; 
+
 proc  means data=dietbdcomplete2 noprint;
 by child_id;
-var TotCAL 
+var TotCAL age_R24
 /* nutrients */
 TotPRO TotFAT TotCARB TotSFA TotMUFA TotPUFA TotFIB TotSUG TotCa TotIron TotMg SUMPh TotK TotaNa TotZn TotCu 
 TotMn TotSe TotVitC TotVitB1 TotVitB2 TotVitB3 TotVitB5 TotVitB6 TotFol TotFolic TotFFol TotDFE TotChol TotVitB12 TotVitA
@@ -330,6 +349,8 @@ TotMEATG TotUPMeatG TotPMeatG TotWMeatG TotRMeatG
 TotSSB TotWaterG TotSugWaterG TotSportBevG TotCoffG TotSCoffG TotSodaG TotSSodaG TotDSodaG TotJuiceG TotFJuiceG TotSJuiceG
 TotTea TotSTea TotSwMilkSubG TotMilkSubG TotSwMilkG TotFlvPowG TotSwMilkAndSub TotSwYogG;
 output out=avgDIETperGIRL 
+/* Age */ 
+MEAN(age_R24)=AvgR24AGE
 /* Nutrients */ 
 MEAN(TotCAL)=AvgCAL MEAN(TotPRO)=AvgPRO MEAN(TotFAT)=AvgFAT MEAN(TotCARB)=AvgCARB
 MEAN(TotSFA)=AvgSFA MEAN(TotMUFA)=AvgMUFA MEAN(TotPUFA)=AvgPUFA MEAN(TotFIB)=AvgFIB MEAN(TotSUG)=AvgSUG MEAN(TotCa)=AvgCa
@@ -402,6 +423,10 @@ set DietRank;
 	num_recall_cat=_FREQ_;
 	if _FREQ_ in (4,5,6) then num_recall_cat=4;
 
+	/* categorizing the number of 24-hr recalls- binary*/ 
+	num_recall_bin=_FREQ_;
+	if _FREQ_ in (2,3,4,5,6) then num_recall_bin=2;
+
 run; 
 
  
@@ -413,6 +438,12 @@ run;
 
 ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Aug08\Diet_histograms.xlsx"
 options(start_at="2,2" embedded_titles = 'on' sheet_interval='proc'); 
+
+* checking data distribution for age; 
+proc means data = dietBDperGIRL2; 
+class num_recall_bin; 
+var AvgR24age; 
+run; 
 
 * checking data distribution for diet; 
 proc univariate data = dietBDperGIRL2; 

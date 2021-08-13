@@ -24,6 +24,9 @@ data dietBDperGIRL3;
 	set dat.BDR24_final; 
 	run; 
 
+data dietBDperGIRL; 
+	set dietBDperGIRL3; 
+	run; 
 
 /***********************************************************************************
 ************************************************************************************
@@ -80,7 +83,7 @@ data dietBDperGIRL_sens;
 ***********************************************************************************/
 
 /* Create quartiles of SSB */ 
-proc rank data=dietBDperGIRL1 out=DietRank groups=4;                               
+proc rank data=dietBDperGIRL_sens out=DietRank groups=4;                               
      var 
 		AvgSSB	
 		AvgSSBa_05 
@@ -107,7 +110,7 @@ proc rank data=dietBDperGIRL1 out=DietRank groups=4;
   run;     
 
 
-ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Aug08\Diet_stats.xlsx"
+ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Aug08\Diet_stats_sens.xlsx"
 options(start_at="2,2" embedded_titles = 'on' sheet_interval='proc') 
 ;
 
@@ -140,26 +143,317 @@ proc freq data = dietRank;
 ods excel close; 
 
 
+proc means data=dietRank n nmiss min median max;
+	class AvgSSBb_05Q;
+	var AvgSSBb_05;
+run; 
+proc means data=dietRank n nmiss min median max;
+	class AvgSSBb_20Q;
+	var AvgSSBb_20;
+run; 
+
+/* Creating median continuous vars for trend test (quartiles) */ 
 data dietBDperGIRL3; 
 	set dietRank; 
-	run; 
+		* Obese girls: 5% ; 
+	if AvgSSBb_05Q = 0 then medQ_AvgSSB05Q = 125; 
+	else if AvgSSBb_05Q = 1 then medQ_AvgSSB05Q = 264; 
+	else if AvgSSBb_05Q = 2 then medQ_AvgSSB05Q = 373; 
+	else if AvgSSBb_05Q = 3 then medQ_AvgSSB05Q = 618; 
+		* Obese girls: 20%; 
+	if AvgSSBb_20Q = 0 then medQ_AvgSSB20Q = 125; 
+	else if AvgSSBb_20Q = 1 then medQ_AvgSSB20Q = 272; 
+	else if AvgSSBb_20Q = 2 then medQ_AvgSSB20Q = 375; 
+	else if AvgSSBb_20Q = 3 then medQ_AvgSSB20Q = 1143; 
+run; 
 
 
 /***********************************************************************************
 ************************************************************************************
-					4. 	rE-DOING ANALYSIS 
-	[should update file/folder if re-running]
+					4. SENSITIVITY ANALYSIS: 5% AND 20% AMONG OBESE GIRLS
 ************************************************************************************
 ***********************************************************************************/
 
-		/*************************
-		**************************
-		ANALYSIS 
-		*************************
-		*************************/
+/* ANALYSIS - 5% UNDERREPORT AMONG OBESE */ 
+ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Aug08\sens\Reg_5percent_obese.xlsx"
+options(start_at="2,2" embedded_titles = 'on' sheet_interval='proc') 
+;
+/* absolute FGV */ 
+Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
+proc genmod data=dietBDperGIRL3  ; 
+class AvgSSBb_05Q (ref=first); 
+model avg_aFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05/dist=normal link=identity;
+run;
+Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first) ; 
+model avg_aFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV /dist=normal link=identity;
+run;
+Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
+model avg_aFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
+run;
+Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 4 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist circumference)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
+model avg_aFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
+run;
+
+/* %FGV */
+Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_05Q (ref=first); 
+model avg_perFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05/dist=normal link=identity;
+run;
+Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first) ; 
+model avg_perFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV /dist=normal link=identity;
+run;
+Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
+model avg_perFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
+run;
+Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 4 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
+model avg_perFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
+run;
+
+/* Total breast volume */
+Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_05Q (ref=first); 
+model avg_TotVol= AvgSSBb_05Q antro_baz Age_visit avgCalb_05/dist=normal link=identity;
+run;
+Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first) ; 
+model avg_TotVol= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV /dist=normal link=identity;
+run;
+Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
+model avg_TotVol= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
+run;
+Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
+model avg_TotVol= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
+run;
+
+/* Trend Tests */ 
+Title 'Trend Test- absolute FGV ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
+proc genmod data=dietBDperGIRL3 ;
+model avg_aFGV= medQ_AvgSSB05Q antro_baz Age_visit AvgCal/dist=normal link=identity;
+run;
+Title 'Trend Test- absolute FGV ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)';  
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first) ; 
+model avg_aFGV= medQ_AvgSSB05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV /dist=normal link=identity;
+run;
+Title 'Trend Test- absolute FGV ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first); 
+model avg_aFGV= medQ_AvgSSB05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
+run;
+Title 'Trend Test- absolute FGV ~ SSB quartile: MODEL 4 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist circumference)'; 
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first); 
+model avg_aFGV= medQ_AvgSSB05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
+run;
+Title 'Trend Test- percent FGV ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
+proc genmod data=dietBDperGIRL3 ;
+model avg_perFGV= medQ_AvgSSB05Q antro_baz Age_visit AvgCal/dist=normal link=identity;
+run;
+Title 'Trend Test- percent FGV ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)';  
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first) ; 
+model avg_perFGV= medQ_AvgSSB05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV /dist=normal link=identity;
+run;
+Title 'Trend Test- percent FGV ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first); 
+model avg_perFGV= medQ_AvgSSB05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
+run;
+Title 'Trend Test- percent FGV ~ SSB quartile: MODEL 4 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist circumference)'; 
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first); 
+model avg_perFGV= medQ_AvgSSB05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
+run;
+Title 'Trend Test- total BV ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
+proc genmod data=dietBDperGIRL3 ;
+model avg_TotVol= medQ_AvgSSB05Q antro_baz Age_visit AvgCal/dist=normal link=identity;
+run;
+Title 'Trend Test- total BV ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)';  
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first) ; 
+model avg_TotVol= medQ_AvgSSB05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV /dist=normal link=identity;
+run;
+Title 'Trend Test- total BV ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first); 
+model avg_TotVol= medQ_AvgSSB05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
+run;
+Title 'Trend Test- total BV ~ SSB quartile: MODEL 4 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist circumference)'; 
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first); 
+model avg_TotVol= medQ_AvgSSB05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
+run;
+
+ods excel close; 
+
+	
+
+/* ANALYSIS - 20% UNDERREPORT AMONG OBESE */ 
+
+ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Aug08\sens\Reg_20percent_obese.xlsx"
+options(start_at="2,2" embedded_titles = 'on' sheet_interval='proc') 
+;
+/* absolute FGV */ 
+Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
+proc genmod data=dietBDperGIRL3  ; 
+class AvgSSBb_20Q (ref=first); 
+model avg_aFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20/dist=normal link=identity;
+run;
+Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first) ; 
+model avg_aFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV /dist=normal link=identity;
+run;
+Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
+model avg_aFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
+run;
+Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 4 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist circumference)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
+model avg_aFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
+run;
+
+
+/* %FGV */
+Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_20Q (ref=first); 
+model avg_perFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20/dist=normal link=identity;
+run;
+Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first) ; 
+model avg_perFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV /dist=normal link=identity;
+run;
+Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
+model avg_perFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
+run;
+Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 4 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
+model avg_perFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
+run;
+
+
+/* Total breast volume */
+Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_20Q (ref=first); 
+model avg_TotVol= AvgSSBb_20Q antro_baz Age_visit avgCalb_20/dist=normal link=identity;
+run;
+Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first) ; 
+model avg_TotVol= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV /dist=normal link=identity;
+run;
+Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
+model avg_TotVol= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
+run;
+Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist)'; 
+proc genmod data=dietBDperGIRL3 ;
+class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
+model avg_TotVol= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
+run;
+
+/* Trend Tests */ 
+Title 'Trend Test- absolute FGV ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
+proc genmod data=dietBDperGIRL3 ;
+model avg_aFGV= medQ_AvgSSB20Q antro_baz Age_visit AvgCal/dist=normal link=identity;
+run;
+Title 'Trend Test- absolute FGV ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)';  
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first) ; 
+model avg_aFGV= medQ_AvgSSB20Q antro_baz Age_visit avgCalb_05 educ_M dailyTV /dist=normal link=identity;
+run;
+Title 'Trend Test- absolute FGV ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first); 
+model avg_aFGV= medQ_AvgSSB20Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
+run;
+Title 'Trend Test- absolute FGV ~ SSB quartile: MODEL 4 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist circumference)'; 
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first); 
+model avg_aFGV= medQ_AvgSSB20Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
+run;
+Title 'Trend Test- percent FGV ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
+proc genmod data=dietBDperGIRL3 ;
+model avg_perFGV= medQ_AvgSSB20Q antro_baz Age_visit AvgCal/dist=normal link=identity;
+run;
+Title 'Trend Test- percent FGV ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)';  
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first) ; 
+model avg_perFGV= medQ_AvgSSB20Q antro_baz Age_visit avgCalb_05 educ_M dailyTV /dist=normal link=identity;
+run;
+Title 'Trend Test- percent FGV ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first); 
+model avg_perFGV= medQ_AvgSSB20Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
+run;
+Title 'Trend Test- percent FGV ~ SSB quartile: MODEL 4 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist circumference)'; 
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first); 
+model avg_perFGV= medQ_AvgSSB20Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
+run;
+Title 'Trend Test- total BV ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
+proc genmod data=dietBDperGIRL3 ;
+model avg_TotVol= medQ_AvgSSB20Q antro_baz Age_visit AvgCal/dist=normal link=identity;
+run;
+Title 'Trend Test- total BV ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)';  
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first) ; 
+model avg_TotVol= medQ_AvgSSB20Q antro_baz Age_visit avgCalb_05 educ_M dailyTV /dist=normal link=identity;
+run;
+Title 'Trend Test- total BV ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first); 
+model avg_TotVol= medQ_AvgSSB20Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
+run;
+Title 'Trend Test- total BV ~ SSB quartile: MODEL 4 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist circumference)'; 
+proc genmod data=dietBDperGIRL3 ;
+class educ_M (ref=first) dailyTV(ref=first); 
+model avg_TotVol= medQ_AvgSSB20Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
+run;
+
+ods excel close;
+
+
+
+
+
+/***********************************************************************************
+************************************************************************************
+					5. LEFTOVER UNDERREPORT SENSITIVITY ANALYSIS (not used in paper)
+************************************************************************************
+***********************************************************************************/
+
 
 /* ANALYSIS - 5% UNDERREPORT */ 
-ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Jan08_sens\Reg_5percent_overweight.xlsx"
+ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Aug08\sens\Reg_5percent_overweight.xlsx"
 options(start_at="2,2" embedded_titles = 'on' sheet_interval='proc') 
 ;
 /* absolute FGV */ 
@@ -234,7 +528,7 @@ ods excel close;
 
 
 /* ANALYSIS - 10% UNDERREPORT */ 
-ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Jan08_sens\Reg_10percent_overweight.xlsx"
+ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Aug08\sens\Reg_10percent_overweight.xlsx"
 options(start_at="2,2" embedded_titles = 'on' sheet_interval='proc') 
 ;
 /* absolute FGV */ 
@@ -310,7 +604,7 @@ ods excel close;
 
 /* ANALYSIS - 20% UNDERREPORT */ 
 
-ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Jan08_sens\Reg_20percent_overweight.xlsx"
+ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Aug08\sens\Reg_20percent_overweight.xlsx"
 options(start_at="2,2" embedded_titles = 'on' sheet_interval='proc') 
 ;
 /* absolute FGV */ 
@@ -384,83 +678,14 @@ run;
 ods excel close; 
 
 
-/* ANALYSIS - 5% UNDERREPORT AMONG OBESE */ 
-ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Jan08_sens\Reg_5percent_obese.xlsx"
-options(start_at="2,2" embedded_titles = 'on' sheet_interval='proc') 
-;
-/* absolute FGV */ 
-Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
-proc genmod data=dietBDperGIRL3  ; 
-class AvgSSBb_05Q (ref=first); 
-model avg_aFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05/dist=normal link=identity;
-run;
-Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first) ; 
-model avg_aFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV /dist=normal link=identity;
-run;
-Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
-model avg_aFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
-run;
-Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 4 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist circumference)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
-model avg_aFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
-run;
 
-
-/* %FGV */
-Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_05Q (ref=first); 
-model avg_perFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05/dist=normal link=identity;
-run;
-Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first) ; 
-model avg_perFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV /dist=normal link=identity;
-run;
-Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
-model avg_perFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
-run;
-Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 4 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
-model avg_perFGV= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
-run;
-
-
-/* Total breast volume */
-Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_05Q (ref=first); 
-model avg_TotVol= AvgSSBb_05Q antro_baz Age_visit avgCalb_05/dist=normal link=identity;
-run;
-Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first) ; 
-model avg_TotVol= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV /dist=normal link=identity;
-run;
-Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
-model avg_TotVol= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
-run;
-Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_05Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
-model avg_TotVol= AvgSSBb_05Q antro_baz Age_visit avgCalb_05 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
-run;
-
-ods excel close; 
+/*******************
+*** OBESE GIRLS  ***
+*******************/
 
 
 /* ANALYSIS - 10% UNDERREPORT AMONG OBESE */ 
-ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Jan08_sens\Reg_10percent_obese.xlsx"
+ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Aug08\sens\Reg_10percent_obese.xlsx"
 options(start_at="2,2" embedded_titles = 'on' sheet_interval='proc') 
 ;
 /* absolute FGV */ 
@@ -534,90 +759,14 @@ run;
 ods excel close; 
 
 
-/* ANALYSIS - 20% UNDERREPORT AMONG OBESE */ 
 
-ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Jan08_sens\Reg_20percent_obese.xlsx"
-options(start_at="2,2" embedded_titles = 'on' sheet_interval='proc') 
-;
-/* absolute FGV */ 
-Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
-proc genmod data=dietBDperGIRL3  ; 
-class AvgSSBb_20Q (ref=first); 
-model avg_aFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20/dist=normal link=identity;
-run;
-Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first) ; 
-model avg_aFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV /dist=normal link=identity;
-run;
-Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
-model avg_aFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
-run;
-Title 'Linear Regression- absolute FGV ~ SSB quartile: MODEL 4 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist circumference)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
-model avg_aFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
-run;
+/***********************************************************************************
+************************************************************************************
+					6. SSB & BMI/Fat%/Waist 
+************************************************************************************
+***********************************************************************************/
 
-
-/* %FGV */
-Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_20Q (ref=first); 
-model avg_perFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20/dist=normal link=identity;
-run;
-Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first) ; 
-model avg_perFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV /dist=normal link=identity;
-run;
-Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
-model avg_perFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
-run;
-Title 'Linear Regression- percent FGV ~ SSB quartile: MODEL 4 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
-model avg_perFGV= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
-run;
-
-
-/* Total breast volume */
-Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 1 (adjusted for BMI, age, and total calories)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_20Q (ref=first); 
-model avg_TotVol= AvgSSBb_20Q antro_baz Age_visit avgCalb_20/dist=normal link=identity;
-run;
-Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 2 (adjusted for BMI, age,total calories, mother education, TV)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first) ; 
-model avg_TotVol= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV /dist=normal link=identity;
-run;
-Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
-model avg_TotVol= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV AvgDairy AvgMeat/dist=normal link=identity;
-run;
-Title 'Linear Regression- Total breast volume ~ SSB quartile: MODEL 3 (adjusted for BMI, age,total calories, mother education, TV, dairy, meat, waist)'; 
-proc genmod data=dietBDperGIRL3 ;
-class AvgSSBb_20Q (ref=first) educ_M (ref=first) dailyTV(ref=first); 
-model avg_TotVol= AvgSSBb_20Q antro_baz Age_visit avgCalb_20 educ_M dailyTV AvgDairy AvgMeat antro_promcint/dist=normal link=identity;
-run;
-
-ods excel close;
-
-
-
-		/*************************
-		**************************
-		SSB & BMI/Fat%/Waist 
-		*************************
-		*************************/
-
-ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Jan08_sens\ssb_anthro.xlsx"
+ods excel file = "C:\Users\laray\Box\Projects\2018-SSB\Analysis\Output\2021Aug08\sens\ssb_anthro.xlsx"
 options(start_at="2,2" embedded_titles = 'on' sheet_interval='proc') 
 ;
 /* BMI Z */ 
